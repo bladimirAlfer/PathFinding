@@ -7,11 +7,12 @@
 
 #include <SFML/Graphics.hpp>
 #include <fstream>
+#include <sstream>
 
 // Color por defecto de un vertice (usado por SFML)
 sf::Color default_node_color = sf::Color(150, 40, 50);
 // Radio por defecto de un vertice (usado por SFML)
-float default_radius = 0.4f;
+float default_radius = 0.2f;
 
 
 struct Edge;
@@ -45,36 +46,30 @@ struct Node {
 
     static void parse_csv(const std::string &nodes_path, std::map<std::size_t, Node *> &nodes) {
         std::ifstream file(nodes_path);
-        char *header = new char[40];
-        header[39] = '\0';
-        file.getline(header, 40, '\n');
-        delete[] header;
+        if (!file.is_open()) return;
 
-        while (true) {
-            char *id, *x, *y;
-            id = new char[15];
-            for (int i = 0; i < 15; ++i) id[i] = '\0';
-            y = new char[15];
-            for (int i = 0; i < 15; ++i) y[i] = '\0';
-            x = new char[15];
-            for (int i = 0; i < 15; ++i) x[i] = '\0';
+        std::string line;
+        std::getline(file, line);
 
-            file.getline(id, 15, ',');
-            file.getline(y, 15, ',');
-            file.getline(x, 15, '\n');
+        while (std::getline(file, line)) {
+            if (line.empty())
+                continue;
 
-            if (file.eof()) {
-                break;
+            std::stringstream ss(line);
+            std::string id_str, y_str, x_str;
+            if (!std::getline(ss, id_str, ',')) continue;
+            if (!std::getline(ss, y_str, ',')) continue;
+            if (!std::getline(ss, x_str, ',')) continue;
+
+            try {
+                std::size_t identifier = std::stoull(id_str);
+                float y = std::stof(y_str);
+                float x = std::stof(x_str);
+                nodes[identifier] = new Node(identifier, y, x);
             }
-
-            std::size_t identifier = static_cast<size_t>(std::stoll(id));
-            nodes.insert({
-                                 identifier,
-                                 new Node(identifier, std::stof(y), std::stof(x))});
-
-            delete[] id;
-            delete[] y;
-            delete[] x;
+            catch (const std::exception&) {
+                continue;
+            }
         }
     }
 
