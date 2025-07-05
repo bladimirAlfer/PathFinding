@@ -56,6 +56,8 @@ Además:
 - Puede considere como heuristica la distancia en linea recta.
 - **Debe realizar un pequeño video (2 min) mostrando la funcionalidad visual de cada algoritmo**
 
+- (video) https://drive.google.com/file/d/1cE5_GekfsoEOxPb9sUj4YgzQ_nabfme4/view?usp=sharing 
+  
 ## Diagrama de clases UML 
 
 ![image](https://github.com/utec-cs-aed/homework_graph/assets/79115974/f5a3d89e-cb48-4715-b172-a17e6e27ee24)
