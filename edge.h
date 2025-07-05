@@ -10,11 +10,15 @@
 #include <cstring>
 #include <fstream>
 #include <cmath>
+#include <sstream>   // <— Asegúrate de esto
+#include <string>
+#include <exception>
+
 
 // Color por defecto de todas las aristas (usado por SFML)
 sf::Color default_edge_color = sf::Color(255, 200, 100);
 // Grosor por defecto de todas las aristas (usado por SFML)
-float default_thickness = 0.8;
+float default_thickness = 0.05f;
 
 
 // No tocar esta clase
@@ -88,66 +92,63 @@ struct Edge {
                                                                                                   dest(dest) {
     }
 
-    static void
-    parse_csv(const std::string &edges_path, std::vector<Edge *> &edges, std::map<std::size_t, Node *> &nodes) {
+    static void parse_csv(
+            const std::string &edges_path,
+            std::vector<Edge *> &edges,
+            std::map<std::size_t, Node *> &nodes)
+    {
+        std::ifstream file(edges_path);
+        if (!file.is_open()) return;
+
+        std::string line;
+        std::getline(file, line);
+
         edges.reserve(790'509);
 
-        std::ifstream file(edges_path);
-        char *header = new char[50];
-        header[49] = '\0';
-        file.getline(header, 50, '\n');
-        delete[] header;
+        while (std::getline(file, line)) {
+            if (line.empty()) continue;
 
-        while (true) {
-            char *src, *dest, *max_speed, *length, *oneway, *lanes;
+            std::stringstream ss(line);
+            std::string src_str, dst_str, speed_str, length_str, oneway_str, lanes_str;
 
-            src = new char[15];
-            for (int i = 0; i < 15; ++i) src[i] = '\0';
-            dest = new char[15];
-            for (int i = 0; i < 15; ++i) dest[i] = '\0';
-            max_speed = new char[5];
-            for (int i = 0; i < 5; ++i) max_speed[i] = '\0';
-            length = new char[20];
-            for (int i = 0; i < 20; ++i) length[i] = '\0';
-            oneway = new char[6];
-            for (int i = 0; i < 6; ++i) oneway[i] = '\0';
-            lanes = new char[3];
-            for (int i = 0; i < 3; ++i) lanes[i] = '\0';
+            if (!std::getline(ss, src_str, ','))   continue;
+            if (!std::getline(ss, dst_str, ','))   continue;
+            if (!std::getline(ss, speed_str, ',')) continue;
+            if (!std::getline(ss, length_str, ','))continue;
+            if (!std::getline(ss, oneway_str, ','))continue;
+            if (!std::getline(ss, lanes_str, ',')) continue;
 
-            file.getline(src, 15, ',');
-            file.getline(dest, 15, ',');
-            file.getline(max_speed, 5, ',');
-            file.getline(length, 20, ',');
-            file.getline(oneway, 6, ',');
-            file.getline(lanes, 3, '\n');
+            try {
+                auto src_id   = std::stoull(src_str);
+                auto dst_id   = std::stoull(dst_str);
+                int  max_spd  = std::stoi(speed_str);
+                double len    = std::stod(length_str);
+                bool one_way  = (oneway_str == "True");
+                int  lanes    = std::stoi(lanes_str);
 
-            if (file.eof()) {
-                break;
+                // Verifica existencia de nodos
+                auto it_src = nodes.find(src_id);
+                auto it_dst = nodes.find(dst_id);
+                if (it_src == nodes.end() || it_dst == nodes.end())
+                    continue;
+
+                Edge *e = new Edge(
+                        it_src->second,
+                        it_dst->second,
+                        max_spd,
+                        len,
+                        one_way,
+                        lanes
+                );
+                edges.push_back(e);
             }
-
-            std::size_t src_id = static_cast<size_t>(std::stoll(src));
-            std::size_t dest_id = static_cast<size_t>(std::stoll(dest));
-
-            Node *src_node = nodes[src_id];
-            Node *dest_node = nodes[dest_id];
-
-            Edge *edge = new Edge(
-                    src_node,
-                    dest_node,
-                    std::stoi(max_speed),
-                    std::stod(length),
-                    std::strcmp(oneway, "True") == 0,
-                    std::stoi(lanes)
-            );
-            edges.push_back(edge);
-
-            delete[] src;
-            delete[] dest;
-            delete[] oneway;
-            delete[] length;
-            delete[] lanes;
+            catch (const std::exception&) {
+                // línea malformada o conversión fallida: saltarla
+                continue;
+            }
         }
     }
+
 
     void draw(sf::RenderWindow &window) const {
         sfLine line(src->coord, dest->coord, color, thickness);
