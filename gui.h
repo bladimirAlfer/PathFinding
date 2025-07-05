@@ -1,156 +1,176 @@
-//
 // Created by juan-diego on 3/11/24.
-//
 
 #ifndef HOMEWORK_GRAPH_GUI_H
 #define HOMEWORK_GRAPH_GUI_H
 
+#include <SFML/Graphics.hpp>
+#include <cmath>
+#include <functional>
+#include <limits>
+#include <map>
 
 #include "window_manager.h"
 #include "path_finding_manager.h"
 
-#include <cmath>
-#include <functional>
-
-
 class GUI {
-    WindowManager window_manager;
-    PathFindingManager path_finding_manager;
+    WindowManager       window_manager;
+    PathFindingManager  path_finding_manager;
+    Graph               graph;
 
-    Graph graph;
-
-    // 1NN es un algoritmo muy popular que retorna el 1 Nearest Neighbour (de ahí el nombre 1NN), o vecino más cercano
-    // de una coleccion de elementos a una query dada.
-    // En este caso, nos interesa conocer cuál es el nodo mas cercano al punto 'query' pasado como parámetro.
-    static Node *_1NN(std::map<std::size_t, Node *> &nodes, sf::Vector2i query) {
-        Node *nearest = nullptr;
-        double min_dist = std::numeric_limits<double>::max();
-        std::function<double(sf::Vector2f)> euclidean = [&](sf::Vector2f point) {
-            return std::sqrt(
-                    std::pow((point.x - (double) query.x), 2) + std::pow((point.y - (double) query.y), 2)
-            );
-        };
-
-        for (auto &[_, node]: nodes) {
-            double dist = euclidean(node->coord);
-            if (dist < min_dist) {
-                min_dist = dist;
+    static Node* _1NN(const std::map<std::size_t, Node*>& nodes, sf::Vector2f pos) {
+        Node* nearest = nullptr;
+        float  minDist = std::numeric_limits<float>::infinity();
+        for (auto& [_, node] : nodes) {
+            float dx = node->coord.x - pos.x;
+            float dy = node->coord.y - pos.y;
+            float d  = std::sqrt(dx*dx + dy*dy);
+            if (d < minDist) {
+                minDist = d;
                 nearest = node;
             }
         }
-
         return nearest;
     }
 
 public:
-
-    explicit GUI(const std::string &nodes_path, const std::string &edges_path)
-            : path_finding_manager(&window_manager), graph(&window_manager) {
-        // Parsea los nodos y aristas leyendolos a partir del csv
+    explicit GUI(const std::string& nodes_path, const std::string& edges_path)
+            : window_manager(600, 800),
+              path_finding_manager(&window_manager),
+              graph(&window_manager)
+    {
         graph.parse_csv(nodes_path, edges_path);
-        // Para fines de la animación, puede variar dependiendo del computador
         window_manager.get_window().setFramerateLimit(200);
+    }
+
+    void setStartEnd(size_t src_id, size_t dst_id) {
+        auto it_s = graph.nodes.find(src_id);
+        auto it_d = graph.nodes.find(dst_id);
+        if (it_s != graph.nodes.end() && it_d != graph.nodes.end()) {
+            path_finding_manager.src  = it_s->second;
+            path_finding_manager.dest = it_d->second;
+            // Resalta visualmente
+            path_finding_manager.src->color  = sf::Color::Green;
+            path_finding_manager.dest->color = sf::Color::Cyan;
+            path_finding_manager.src->radius =
+            path_finding_manager.dest->radius = 5.0f;
+        } else {
+            std::cerr << "setStartEnd: IDs inválidos ("
+                      << src_id << ", " << dst_id << ")\n";
+        }
     }
 
     void main_loop() {
         bool draw_extra_lines = false;
 
-        // Corre la GUI siempre y cuando la ventana esté abierta
         while (window_manager.is_open()) {
-            // Verifica los eventos de la ventana que pueden ser 'triggereados' (lanzados) por el usuario en la
-            // iteración actual
-            sf::Event event{};
-
+            sf::Event event;
             while (window_manager.poll_event(event)) {
-                // Verifica por casos que evento se lanzó en la iteración actual
                 switch (event.type) {
-                    // Caso 1: El usuario cerro la ventana
-                    case sf::Event::Closed: {
-                        // Cerrar la ventana y terminar la animación
+                    // Cerrar ventana
+                    case sf::Event::Closed:
                         window_manager.close();
                         break;
-                    }
 
-                    // Caso 2: El usuario presiono una tecla
+                        // Ejecución de algoritmos y toggles
                     case sf::Event::KeyPressed: {
                         switch (event.key.code) {
-                            // D = Ejecutar Dijkstra
-                            case sf::Keyboard::D: {
+                            case sf::Keyboard::D:
                                 path_finding_manager.exec(graph, Dijkstra);
                                 break;
-                            }
-                            // A = Ejecutar AStar
-                            case sf::Keyboard::A: {
+                            case sf::Keyboard::A:
                                 path_finding_manager.exec(graph, AStar);
                                 break;
-                            }
-                            // R = Limpia la ultima simulación realizada.
-                            //     También restaura los valores de 'src' y 'dest' a nullptr.
-                            case sf::Keyboard::R: {
+                            case sf::Keyboard::B:
+                                path_finding_manager.exec(graph, BFS);
+                                break;
+                            case sf::Keyboard::R:
                                 path_finding_manager.reset();
                                 break;
-                            }
-                            // E = Extra flag. Si es verdadero, hace un display de todos los 'edges'
-                            //     visitados en la ejecución del último algoritmo.
-                            case sf::Keyboard::E: {
+                            case sf::Keyboard::E:
                                 draw_extra_lines = !draw_extra_lines;
                                 break;
-                            }
-                            // Q = Quit, misma funcionalidad que cerrar la ventana
-                            case sf::Keyboard::Q: {
+                            case sf::Keyboard::Q:
                                 window_manager.close();
                                 break;
+                            case sf::Keyboard::Left: {
+                                sf::View v = window_manager.getView();
+                                v.move(-50.f, 0.f);
+                                window_manager.setView(v);
+                                break;
                             }
-                            // Si no es alguna de las teclas anteriores, no hace nada
+                            case sf::Keyboard::Right: {
+                                sf::View v = window_manager.getView();
+                                v.move(50.f, 0.f);
+                                window_manager.setView(v);
+                                break;
+                            }
+                            case sf::Keyboard::Up: {
+                                sf::View v = window_manager.getView();
+                                v.move(0.f, -50.f);
+                                window_manager.setView(v);
+                                break;
+                            }
+                            case sf::Keyboard::Down: {
+                                sf::View v = window_manager.getView();
+                                v.move(0.f, 50.f);
+                                window_manager.setView(v);
+                                break;
+                            }
                             default:
                                 break;
                         }
                         break;
                     }
 
-                    // Caso 3: El usuario presionó el mouse
-                    case sf::Event::MouseButtonPressed : {
-                        // Obtiene las posiciones del mouse respecto a la ventana
-                        sf::Vector2i mouse_position = sf::Mouse::getPosition(window_manager.get_window());
-
-                        // Si no existe un nodo fuente ('src') asignado
-                        if (path_finding_manager.src == nullptr) {
-                            // Encuentra el vértice más cercano a la posición del mouse y asigna el vértice a 'src'
-                            path_finding_manager.src = _1NN(graph.nodes, mouse_position);
-                            path_finding_manager.src->color = sf::Color::Green;
-                            path_finding_manager.src->radius = 3.0f;
-                        }
-                        // Si no existe un nodo destino ('dest') asignado
-                        else if (path_finding_manager.dest == nullptr) {
-                            // Encuentra el vértice más cercano a la posición del mouse y asigna el vértice a 'dest'
-                            path_finding_manager.dest = _1NN(graph.nodes, mouse_position);
-                            path_finding_manager.dest->color = sf::Color::Cyan;
-                            path_finding_manager.dest->radius = 3.0f;
+                    case sf::Event::MouseWheelScrolled:
+                        if (event.mouseWheelScroll.wheel == sf::Mouse::VerticalWheel) {
+                            float factor = (event.mouseWheelScroll.delta > 0) ? 0.9f : 1.1f;
+                            sf::View v = window_manager.getView();
+                            v.zoom(factor);
+                            window_manager.setView(v);
                         }
                         break;
-                    }
 
-                    // Cualquier otro evento es ignorado
-                    default: {
+                    case sf::Event::MouseButtonPressed:
+                        if (event.mouseButton.button == sf::Mouse::Left) {
+                            auto& win = window_manager.get_window();
+                            sf::Vector2i pix{ event.mouseButton.x, event.mouseButton.y };
+                            sf::Vector2f worldPos = win.mapPixelToCoords(pix, window_manager.getView());
+
+                            const float screenRadius = 8.f;
+                            auto winSize = win.getSize();
+                            float pixelsPerWorld = float(winSize.y) / window_manager.getView().getSize().y;
+                            float worldRadius     = screenRadius / pixelsPerWorld;
+
+                            Node* n = _1NN(graph.nodes, worldPos);
+
+                            if (n) {
+                                if (path_finding_manager.src == nullptr) {
+                                    path_finding_manager.src = n;
+                                    n->color  = sf::Color::Green;
+                                    n->radius = worldRadius;
+                                }
+                                else if (path_finding_manager.dest == nullptr) {
+                                    path_finding_manager.dest = n;
+                                    n->color  = sf::Color::Cyan;
+                                    n->radius = worldRadius;
+                                }
+                            }
+                        }
                         break;
-                    }
+
+                    default:
+                        break;
                 }
             }
 
-            // Limpia la ventana anterior
             window_manager.clear();
-
-            // Dibuja el grafo en el frame actual
+            window_manager.get_window().setView(window_manager.getView());
             graph.draw();
-            // Dibuja el 'path' resultante de la simulacion,
-            // si 'extra_lines' es true, también dibujará el resto de aristas visitadas
             path_finding_manager.draw(draw_extra_lines);
-
-            // Hace un display del frame actual
             window_manager.display();
         }
     }
 };
 
-
-#endif //HOMEWORK_GRAPH_GUI_H
+#endif // HOMEWORK_GRAPH_GUI_H
