@@ -60,15 +60,7 @@ Se les solicita implementar tres algoritmos para busqueda en grafos
     - El acceso y la actualización de distancias es `O(1)` promedio gracias a `std::unordered_map`.  
     - Garantiza el coste mínimo, pero explora muchos vértices incluso lejanos al destino.
 
-- **A\***
-  - **Complejidad:** `O((|V| + |E|) log |V|)`
-  - **Por qué:**
-    - Igual que Dijkstra, pero ordena por `f(n) = g(n) + h(n)`.  
-    - En el código calculamos `h(n)` como la distancia euclidiana entre el nodo y el destino.  
-    - Si la heurística es admisible y consistente, sigue siendo óptimo.  
-    - En la práctica reduce drásticamente el número de expansiones alrededor de la ruta directa.
-
-- **Greedy Best–First Search**
+- **Best First Search**
   - **Complejidad:** `O((|V| + |E|) log |V|)`
   - **Por qué:**
     - Prioriza solo `h(n)` sin acumular `g(n)`, pero la cola de prioridad sigue costando `O(log |V|)`.  
@@ -76,6 +68,13 @@ Se les solicita implementar tres algoritmos para busqueda en grafos
     - No almacenamos costes acumulados; marcamos visitados con `std::unordered_set<Node*>`.  
     - Al alcanzar el destino, reconstruimos el recorrido usando el mapa de padres.
 
+- **A\***
+  - **Complejidad:** `O((|V| + |E|) log |V|)`
+  - **Por qué:**
+    - Igual que Dijkstra, pero ordena por `f(n) = g(n) + h(n)`.  
+    - En el código calculamos `h(n)` como la distancia euclidiana entre el nodo y el destino.  
+    - Si la heurística es admisible y consistente, sigue siendo óptimo.  
+    - En la práctica reduce drásticamente el número de expansiones alrededor de la ruta directa.
 
 
 - **Debe realizar un pequeño video (2 min) mostrando la funcionalidad visual de cada algoritmo**
