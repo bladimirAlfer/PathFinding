@@ -53,6 +53,42 @@ Se les solicita implementar tres algoritmos para busqueda en grafos
 
 Además:
 - Analice la complejidad computacional de los tres algoritmos de acuerdo a su propia implementación.
+
+- **Dijkstra**
+  - **Complejidad:**
+    $$
+      O\bigl((|V| + |E|)\,\log |V|\bigr)
+    $$
+  - **Por qué:**
+    - Usamos `std::unordered_map<Node*, double> dist` para almacenar distancias.
+    - Cada vez que encontramos un mejor camino, actualizamos `dist[v]`, su padre y empujamos a la cola.
+    - Las inserciones y extracciones de la cola de prioridad cuestan $O(\log|V|)$.  
+    - El acceso y la actualización de las distancias es $O(1)$ de media gracias a `unordered_map`.  
+    - Es óptimo y garantiza el coste mínimo, pero explora muchos vértices incluso lejos del destino.
+
+- **A\***
+  - **Complejidad (peor caso):**
+    $$
+      O\bigl((|V| + |E|)\,\log |V|\bigr)
+    $$
+  - **Por quéa:**
+    - Usa la misma estructura que Dijkstra, pero ordena por $f(n)=g(n)+h(n)$.
+    - Calculamos \(h^2\)  para la heurística euclidiana entre nodo actual y destino.  
+    - Si la heurística $h(n)$ (distancia euclidiana) es admisible y consistente, sigue siendo óptimo.  
+    - En mapas grandes, reduce drásticamente el número de expansiones alrededor del camino directo.
+
+- **Greedy Best–First Search (BFS voraz)**
+  - **Complejidad:**
+    $$
+      O\bigl((|V| + |E|)\,\log |V|\bigr)
+    $$
+  - **Por qué:**
+    - Prioriza solo $h(n)$, sin acumular $g(n)$, por lo que la cola de prioridad sigue teniendo coste $O(\log|V|)$.  
+    - Expande aún menos nodos cerca de la línea recta al destino, pero no garantiza la ruta más corta (no es óptimo).
+    - No almacenamos costes acumulados, solo marcamos visitados con `std::unordered_set<Node*>`.  
+    - Reconstruimos el camino usando el map de padres una vez alcanzado el destino. 
+
+
 - Puede considere como heuristica la distancia en linea recta.
 - **Debe realizar un pequeño video (2 min) mostrando la funcionalidad visual de cada algoritmo**
 
